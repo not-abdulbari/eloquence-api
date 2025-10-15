@@ -7,7 +7,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 // Define your allowed origins here
 const ALLOWED_ORIGINS = [
-  "https://admin.eloquence.in.net"
+  "https://admin.eloquence.in.net",
   "https://eloquence.in.net", // Your main domain
   "https://eloquence.pages.dev", // Your Cloudflare Pages domain
   "http://localhost:3000" // Your local development server
