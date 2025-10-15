@@ -3,6 +3,62 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+
+⌄
+⌄
+⌄
+⌄
+// --- START: CORS Helper Functions ---
+// These functions handle CORS preflight requests and add necessary headers
+
+// Define your allowed origins here
+const ALLOWED_ORIGINS = [
+  "https://eloquence.in.net", // Your main domain
+  "https://eloquence.pages.dev", // Your Cloudflare Pages domain
+  "http://localhost:3000" // Your local development server
+];
+
+function handleOptions(request) {
+  const origin = request.headers.get("Origin");
+  // Check if the Origin header is present and is in the allowed list
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": origin, // Use the specific origin from the request
+        "Access-Control-Allow-Methods": "POST, OPTIONS", // List allowed methods
+        "Access-Control-Allow-Headers": "Content-Type", // List allowed headers
+        "Access-Control-Max-Age": "86400", // Cache preflight for 24 hours
+      },
+    });
+  } else {
+    // If origin is not allowed, return a 403 or just the basic headers without origin
+    // Returning a response without the header or a 403 is more secure than a blanket allow
+    return new Response(null, {
+      status: 403, // Forbidden
+      headers: {
+         // Do NOT include "Access-Control-Allow-Origin" header here
+         "Access-Control-Allow-Methods": "POST, OPTIONS",
+         "Access-Control-Allow-Headers": "Content-Type",
+         "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+}
+
+function addCorsHeaders(response, request) { // Pass the request object here too
+  const origin = request.headers.get("Origin");
+  // Check if the Origin header is present and is in the allowed list
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin); // Use the specific origin from the request
+  }
+  // Note: Access-Control-Allow-Credentials is often needed with specific origins
+  // but requires the origin to be specified explicitly (not '*').
+  // response.headers.set("Access-Control-Allow-Credentials", "true"); // Uncomment if needed
+  response.headers.set("Access-Control-Max-Age", "86400");
+  return response;
+}
+// --- END: CORS Helper Functions ---
+
 // --- Environment Variable Validation ---
 // Ensure all necessary environment variables are set. The build will fail if any are missing.
 if (
