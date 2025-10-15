@@ -2,12 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-
-
-⌄
-⌄
-⌄
-⌄
 // --- START: CORS Helper Functions ---
 // These functions handle CORS preflight requests and add necessary headers
 
