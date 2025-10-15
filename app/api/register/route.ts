@@ -2,25 +2,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+
 // --- START: CORS Helper Functions ---
 // These functions handle CORS preflight requests and add necessary headers
 
-// Define your allowed origins here
+// Define your allowed origins here (cleaned up spaces)
 const ALLOWED_ORIGINS = [
-  "https://admin.eloquence.in.net",
-  "https://eloquence.in.net", // Your main domain
-  "https://eloquence.pages.dev", // Your Cloudflare Pages domain
-  "http://localhost:3000" // Your local development server
+  "https://admin.eloquence.in.net", // Admin domain
+  "https://eloquence.in.net",       // Your main domain
+  "https://eloquence.pages.dev",    // Your Cloudflare Pages domain
+  "http://localhost:3000"           // Your local development server
 ];
 
-function handleOptions(request: Request) {
+function handleOptions(request: NextRequest) {
   const origin = request.headers.get("Origin");
   // Check if the Origin header is present and is in the allowed list
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     return new Response(null, {
       headers: {
         "Access-Control-Allow-Origin": origin, // Use the specific origin from the request
-        "Access-Control-Allow-Methods": "POST, GET, PUT, DELETE OPTIONS", // List allowed methods
+        "Access-Control-Allow-Methods": "POST, OPTIONS", // Only include methods you actually handle
         "Access-Control-Allow-Headers": "Content-Type", // List allowed headers
         "Access-Control-Max-Age": "86400", // Cache preflight for 24 hours
       },
@@ -32,7 +33,7 @@ function handleOptions(request: Request) {
       status: 403, // Forbidden
       headers: {
          // Do NOT include "Access-Control-Allow-Origin" header here
-         "Access-Control-Allow-Methods": "POST, GET, PUT, DELETE, OPTIONS",
+         "Access-Control-Allow-Methods": "POST, OPTIONS",
          "Access-Control-Allow-Headers": "Content-Type",
          "Access-Control-Max-Age": "86400",
       },
@@ -40,7 +41,7 @@ function handleOptions(request: Request) {
   }
 }
 
-function addCorsHeaders(response: Response, request: Request) { // Pass the request object here too
+function addCorsHeaders(response: NextResponse, request: NextRequest) { // Pass the request object here too
   const origin = request.headers.get("Origin");
   // Check if the Origin header is present and is in the allowed list
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -98,12 +99,19 @@ async function uploadFileToR2(fileBuffer: Buffer, fileName: string, contentType:
 
   // This URL assumes you have a custom domain/CDN set up to serve your R2 bucket.
   // Example: 'cdn.eloquence.in.net' should be publicly serving files from your R2 bucket.
+  // Fixed URL format: removed extra spaces
   return `https://cdn.eloquence.in.net/${key}`;
 }
 
 
 // --- Main API Handler for POST Requests ---
 export async function POST(request: NextRequest) {
+  // Handle CORS preflight OPTIONS request first
+  const optionsResponse = handleOptions(request);
+  if (optionsResponse.status === 204 || optionsResponse.status === 403) { // Check for preflight (204) or forbidden (403)
+    return optionsResponse;
+  }
+
   try {
     const formData = await request.formData();
 
@@ -116,10 +124,12 @@ export async function POST(request: NextRequest) {
 
     // --- File Validation ---
     if (!paymentScreenshotFile) {
-      return NextResponse.json({ error: "Payment screenshot is required." }, { status: 400 });
+      const errorResponse = NextResponse.json({ error: "Payment screenshot is required." }, { status: 400 });
+      return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
     }
     if (!paymentScreenshotFile.type.startsWith('image/')) {
-      return NextResponse.json({ error: "Invalid file type. Please upload an image." }, { status: 400 });
+      const errorResponse = NextResponse.json({ error: "Invalid file type. Please upload an image." }, { status: 400 });
+      return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
     }
 
     // --- File Processing and Upload ---
@@ -153,7 +163,8 @@ export async function POST(request: NextRequest) {
 
     if (registrationError) {
       console.error('Supabase registration insertion error:', registrationError);
-      return NextResponse.json({ error: "Failed to save main registration data.", details: registrationError.message }, { status: 500 });
+      const errorResponse = NextResponse.json({ error: "Failed to save main registration data.", details: registrationError.message }, { status: 500 });
+      return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
     }
 
     // 2. Loop through each event and its team members
@@ -167,7 +178,8 @@ export async function POST(request: NextRequest) {
 
       if (eventError || !eventData) {
         console.error(`Could not find event with title: ${reg.eventId}`, eventError);
-        return NextResponse.json({ error: `Event '${reg.eventId}' not found.` }, { status: 404 });
+        const errorResponse = NextResponse.json({ error: `Event '${reg.eventId}' not found.` }, { status: 404 });
+        return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
       }
       const eventUUID = eventData.id;
 
@@ -184,7 +196,8 @@ export async function POST(request: NextRequest) {
       
       if (eventRegError) {
         console.error('Supabase event registration error:', eventRegError);
-        return NextResponse.json({ error: "Failed to save event registration data.", details: eventRegError.message }, { status: 500 });
+        const errorResponse = NextResponse.json({ error: "Failed to save event registration data.", details: eventRegError.message }, { status: 500 });
+        return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
       }
 
       // 3. Insert team members for the current event registration
@@ -209,19 +222,30 @@ export async function POST(request: NextRequest) {
 
       if (teamMemberError) {
         console.error('Supabase team member error:', teamMemberError);
-        return NextResponse.json({ error: "Failed to save team member data.", details: teamMemberError.message }, { status: 500 });
+        const errorResponse = NextResponse.json({ error: "Failed to save team member data.", details: teamMemberError.message }, { status: 500 });
+        return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
       }
     }
 
     // --- Success Response ---
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       message: "Registration submitted successfully!",
       registrationId: registrationData.id,
     });
 
+    return addCorsHeaders(successResponse, request); // Add CORS headers to success response
+
   } catch (error) {
     console.error('Unexpected error in POST /api/register:', error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return NextResponse.json({ error: "An unexpected server error occurred.", details: errorMessage }, { status: 500 });
+    const errorResponse = NextResponse.json({ error: "An unexpected server error occurred.", details: errorMessage }, { status: 500 });
+    return addCorsHeaders(errorResponse, request); // Add CORS headers to error response
   }
 }
+
+// --- Optional: Add an explicit OPTIONS handler for clarity ---
+// This is sometimes preferred over handling it within the main POST function.
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
+}
+// --- END: Registration Logic ---
