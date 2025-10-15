@@ -13,6 +13,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 // Define your allowed origins here
 const ALLOWED_ORIGINS = [
+    "https://admin.eloquence.in.net"
   "https://eloquence.in.net", // Your main domain
   "https://eloquence.pages.dev", // Your Cloudflare Pages domain
   "http://localhost:3000" // Your local development server
@@ -25,7 +26,7 @@ function handleOptions(request) {
     return new Response(null, {
       headers: {
         "Access-Control-Allow-Origin": origin, // Use the specific origin from the request
-        "Access-Control-Allow-Methods": "POST, OPTIONS", // List allowed methods
+        "Access-Control-Allow-Methods": "POST, GET, PUT, DELETE OPTIONS", // List allowed methods
         "Access-Control-Allow-Headers": "Content-Type", // List allowed headers
         "Access-Control-Max-Age": "86400", // Cache preflight for 24 hours
       },
@@ -37,7 +38,7 @@ function handleOptions(request) {
       status: 403, // Forbidden
       headers: {
          // Do NOT include "Access-Control-Allow-Origin" header here
-         "Access-Control-Allow-Methods": "POST, OPTIONS",
+         "Access-Control-Allow-Methods": "POST, GET, PUT, DELETE, OPTIONS",
          "Access-Control-Allow-Headers": "Content-Type",
          "Access-Control-Max-Age": "86400",
       },
