@@ -40,7 +40,7 @@ function handleOptions(request: Request) {
   }
 }
 
-function addCorsHeaders(response, request) { // Pass the request object here too
+function addCorsHeaders(response: Response, request: Request) { // Pass the request object here too
   const origin = request.headers.get("Origin");
   // Check if the Origin header is present and is in the allowed list
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
