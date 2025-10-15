@@ -13,7 +13,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000" // Your local development server
 ];
 
-function handleOptions(request) {
+function handleOptions(request: Request) {
   const origin = request.headers.get("Origin");
   // Check if the Origin header is present and is in the allowed list
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
