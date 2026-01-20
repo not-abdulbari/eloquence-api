@@ -29,8 +29,8 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // 3. Skip Auth for Login route
-  if (pathname === '/api/login') {
+  // 3. Skip Auth for Login and Register routes
+  if (pathname === '/api/login' || pathname === '/api/register') {
     const response = NextResponse.next();
     response.headers.set('Access-Control-Allow-Origin', responseOrigin);
     return response;
